@@ -378,22 +378,24 @@ def run_seed(db: Session) -> None:
         "Himalayan Hill Potato": (1400.0, 2100.0, 1750.0)
     }
 
-    for crop in all_crops:
-        if crop.crop_name in price_benchmarks:
-            min_p, max_p, modal_p = price_benchmarks[crop.crop_name]
-            for mandi in created_mandis:
-                # Add price variation across mandis
-                adjustment = 50.0 if "Haldwani" in mandi.mandi_name or "Dehradun" in mandi.mandi_name else -40.0
-                mp = MarketPrice(
-                    mandi_id=mandi.id,
-                    crop_id=crop.id,
-                    arrival_date=today,
-                    min_price_per_quintal=min_p + adjustment,
-                    max_price_per_quintal=max_p + adjustment,
-                    modal_price_per_quintal=modal_p + adjustment,
-                    arrivals_in_tonnes=12.5
-                )
-                db.add(mp)
+    existing_market_price = db.query(MarketPrice).filter(MarketPrice.arrival_date == today).first()
+    if not existing_market_price:
+        for crop in all_crops:
+            if crop.crop_name in price_benchmarks:
+                min_p, max_p, modal_p = price_benchmarks[crop.crop_name]
+                for mandi in created_mandis:
+                    # Add price variation across mandis
+                    adjustment = 50.0 if "Haldwani" in mandi.mandi_name or "Dehradun" in mandi.mandi_name else -40.0
+                    mp = MarketPrice(
+                        mandi_id=mandi.id,
+                        crop_id=crop.id,
+                        arrival_date=today,
+                        min_price_per_quintal=min_p + adjustment,
+                        max_price_per_quintal=max_p + adjustment,
+                        modal_price_per_quintal=modal_p + adjustment,
+                        arrivals_in_tonnes=12.5
+                    )
+                    db.add(mp)
 
     # 5. Seed Knowledge Documents & Chunks for RAG
     docs_data = [
