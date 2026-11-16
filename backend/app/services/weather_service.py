@@ -1,7 +1,7 @@
 import json
 import logging
 from datetime import date, datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import httpx
 from sqlalchemy.orm import Session
 
@@ -52,6 +52,9 @@ class WeatherService:
         "Udham Singh Nagar": (28.9800, 79.4000, 218),
     }
 
+    _memory_cache: Dict[str, Tuple[datetime, WeatherOut]] = {}
+    CACHE_TTL_SECONDS = 900  # 15 minutes in-memory cache to prevent redundant Open-Meteo external API calls
+
     @classmethod
     def get_district_weather(
         cls,
@@ -75,21 +78,32 @@ class WeatherService:
         lat, lon, base_elevation = coords
         effective_elevation = elevation if (elevation is not None and elevation > 0) else base_elevation
 
+        cache_key = f"{matched_district}_{int(effective_elevation)}"
+        now = datetime.now()
+        if cache_key in cls._memory_cache:
+            cached_time, cached_val = cls._memory_cache[cache_key]
+            if (now - cached_time).total_seconds() < cls.CACHE_TTL_SECONDS:
+                return cached_val
+
         # Tier 1: Live Open-Meteo API
         open_meteo_result = cls._fetch_open_meteo(lat, lon, effective_elevation, matched_district)
         if open_meteo_result:
             if db:
                 cls._cache_weather_record(db, matched_district, lat, lon, open_meteo_result)
+            cls._memory_cache[cache_key] = (now, open_meteo_result)
             return open_meteo_result
 
         # Tier 2: Relational Database WeatherRecord
         if db:
             db_result = cls._fetch_db_record(db, matched_district)
             if db_result:
+                cls._memory_cache[cache_key] = (now, db_result)
                 return db_result
 
         # Tier 3: Himalayan Elevation Agromet Model
-        return cls._compute_agromet_model(matched_district, effective_elevation)
+        agromet_result = cls._compute_agromet_model(matched_district, effective_elevation)
+        cls._memory_cache[cache_key] = (now, agromet_result)
+        return agromet_result
 
     @classmethod
     def _fetch_open_meteo(

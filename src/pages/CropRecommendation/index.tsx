@@ -38,7 +38,7 @@ import {
 } from 'recharts';
 
 export const CropRecommendationPage: React.FC = () => {
-  const { activeFarm, currentRecommendation, generateRecommendation, showToast } = useApp();
+  const { activeFarm, currentRecommendation, isCalculatingRecommendation, generateRecommendation, showToast } = useApp();
 
   const [step, setStep] = useState(5); // Start at 5 (results view) for instant rich feedback or let user re-run wizard!
   const [selectedCropIndex, setSelectedCropIndex] = useState(0);
@@ -144,9 +144,17 @@ export const CropRecommendationPage: React.FC = () => {
       {/* Page Title & Context Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-charcoal-100">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-forest-50 border border-forest-200 text-xs font-bold text-forest-800 mb-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-saffron-500" />
-            <span>Hybrid Tri-Model AI Decision Engine</span>
+          <div className="flex items-center gap-2 flex-wrap mb-1.5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-forest-50 border border-forest-200 text-xs font-bold text-forest-800">
+              <Sparkles className="w-3.5 h-3.5 text-saffron-500" />
+              <span>Hybrid Tri-Model AI Decision Engine</span>
+            </div>
+            {isCalculatingRecommendation && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-300 text-xs font-bold text-amber-800 animate-pulse">
+                <RefreshCw className="w-3 h-3 animate-spin text-amber-600" />
+                <span>Computing AI Pipeline...</span>
+              </div>
+            )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-forest-900 tracking-tight">
             Intelligent Crop Suitability & Optimization
@@ -455,11 +463,21 @@ export const CropRecommendationPage: React.FC = () => {
             ) : (
               <button
                 type="button"
+                disabled={isCalculatingRecommendation}
                 onClick={handleGenerate}
-                className="px-7 py-3 rounded-xl text-xs font-black bg-saffron-500 hover:bg-saffron-400 text-charcoal-900 shadow-lg shadow-saffron-500/20 transition-all flex items-center gap-2"
+                className="px-7 py-3 rounded-xl text-xs font-black bg-saffron-500 hover:bg-saffron-400 disabled:opacity-60 text-charcoal-900 shadow-lg shadow-saffron-500/20 transition-all flex items-center gap-2"
               >
-                <Sparkles className="w-4 h-4" />
-                <span>Generate Hybrid Ensemble Recommendation</span>
+                {isCalculatingRecommendation ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin text-charcoal-900" />
+                    <span>Processing Hybrid Models...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Generate Hybrid Ensemble Recommendation</span>
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -721,11 +739,12 @@ export const CropRecommendationPage: React.FC = () => {
               <div className="mt-6 pt-4 border-t border-forest-200">
                 <button
                   type="button"
+                  disabled={isCalculatingRecommendation}
                   onClick={handleApplyWhatIf}
-                  className="w-full py-2.5 rounded-xl text-xs font-black bg-saffron-500 hover:bg-saffron-400 text-charcoal-900 shadow-md transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-2.5 rounded-xl text-xs font-black bg-saffron-500 hover:bg-saffron-400 disabled:opacity-60 text-charcoal-900 shadow-md transition-all flex items-center justify-center gap-1.5"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Recalculate Dynamic Suitability</span>
+                  <RefreshCw className={`w-3.5 h-3.5 ${isCalculatingRecommendation ? 'animate-spin' : ''}`} />
+                  <span>{isCalculatingRecommendation ? 'Recalculating Pipeline...' : 'Recalculate Dynamic Suitability'}</span>
                 </button>
               </div>
             </div>

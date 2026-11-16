@@ -25,6 +25,7 @@ class HybridAgriculturalRetriever:
         self.embedding_provider = embedding_provider or get_embedding_provider()
         self.dense_weight = dense_weight
         self.keyword_weight = keyword_weight
+        self._retrieval_cache: Dict[str, List[Dict[str, Any]]] = {}
 
     def retrieve(
         self,
@@ -38,6 +39,10 @@ class HybridAgriculturalRetriever:
         """
         if not query or not query.strip():
             return []
+
+        cache_key = f"{query.strip()}|{top_k}|{crop_filter}|{district_filter}"
+        if cache_key in self._retrieval_cache:
+            return self._retrieval_cache[cache_key]
 
         # 1. Dense Semantic Retrieval
         query_embedding = self.embedding_provider.encode_query(query)
@@ -157,7 +162,9 @@ class HybridAgriculturalRetriever:
 
         # Sort by hybrid score descending
         ranked_list.sort(key=lambda x: x["hybrid_score"], reverse=True)
-        return ranked_list[:top_k]
+        final_result = ranked_list[:top_k]
+        self._retrieval_cache[cache_key] = final_result
+        return final_result
 
     def _tokenize(self, text: str) -> set:
         """Language-agnostic tokenization supporting English and Devanagari Hindi."""

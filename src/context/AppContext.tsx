@@ -49,6 +49,7 @@ interface AppContextType {
   setWeatherDistrict: (districtName: string) => void;
   mandiPrices: MandiPrice[];
   currentRecommendation: EnsembleRecommendationResult;
+  isCalculatingRecommendation: boolean;
   generateRecommendation: (input: CropRecommendationInput) => EnsembleRecommendationResult;
   diagnosesHistory: PlantDiseaseDiagnosis[];
   addDiagnosis: (diag: Omit<PlantDiseaseDiagnosis, 'id' | 'timestamp'>) => PlantDiseaseDiagnosis;
@@ -184,6 +185,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [weather, setWeather] = useState<WeatherData>(demoWeatherData);
   const [mandiPrices] = useState<MandiPrice[]>(demoMandiPrices);
   const [currentRecommendation, setCurrentRecommendation] = useState<EnsembleRecommendationResult>(demoRecommendationResult);
+  const [isCalculatingRecommendation, setIsCalculatingRecommendation] = useState<boolean>(false);
   
   const [diagnosesHistory, setDiagnosesHistory] = useState<PlantDiseaseDiagnosis[]>(() => {
     const saved = localStorage.getItem('kisanmitra_diagnoses');
@@ -468,6 +470,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     setCurrentRecommendation(result);
+    setIsCalculatingRecommendation(true);
     showToast('Calculating AI Ensemble recommendation...', 'info');
 
     // Call live FastAPI Unified Decision Intelligence Pipeline (ML v1.1 + RAG + APMC Mandi + Weather)
@@ -481,6 +484,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .catch(err => {
         console.warn('Live ML inference fallback to offline estimate:', err);
         showToast('AI Ensemble recommendation generated (offline mode)', 'info');
+      })
+      .finally(() => {
+        setIsCalculatingRecommendation(false);
       });
 
     return result;
@@ -542,6 +548,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setWeatherDistrict,
         mandiPrices,
         currentRecommendation,
+        isCalculatingRecommendation,
         generateRecommendation,
         diagnosesHistory,
         addDiagnosis,
